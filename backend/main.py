@@ -3,6 +3,14 @@ import zipfile
 import uuid
 import re
 import aiofiles
+
+# Load .env file when running locally (no-op if python-dotenv is missing or file absent)
+try:
+    from dotenv import load_dotenv
+    _env = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
+    load_dotenv(_env, override=False)
+except ImportError:
+    pass
 from datetime import timedelta
 from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Form, BackgroundTasks
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm

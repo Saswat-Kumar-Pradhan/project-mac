@@ -1,20 +1,35 @@
+# Web framework
 fastapi[standard]==0.112.4
+uvicorn[standard]==0.30.6
+python-dotenv==1.0.1
+
+# Data & ORM (SQLite via SQLAlchemy — no extra driver needed)
 pydantic==2.8.2
 sqlalchemy==2.0.32
-psycopg2-binary==2.9.9
+
+# Auth
 python-jose[cryptography]==3.3.0
 bcrypt==4.0.1
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.9
-pgvector==0.3.5
+
+# File I/O
 aiofiles==23.2.1
+
+# AI / LangChain stack
 langchain-core==0.2.36
 langchain-openai==0.1.22
 langchain-text-splitters==0.2.2
 langchain-community==0.2.14
+
+# Search & vector store
 duckduckgo-search==5.3.1
 chromadb==0.5.5
 tiktoken==0.7.0
+
+# Observability (optional — works even if keys are blank)
 langfuse==2.53.9
+
+# Export
 xhtml2pdf==0.2.15
 markdown2==2.4.13

@@ -5,6 +5,7 @@ import shutil
 import uuid
 import subprocess
 import chromadb
+from chroma import get_chroma_client
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_community.document_loaders import TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -13,9 +14,6 @@ from langchain_core.prompts import PromptTemplate
 from database import SessionLocal, Project
 from sqlalchemy.orm import Session
 from langfuse.callback import CallbackHandler
-
-CHROMA_PATH = os.path.join(os.path.dirname(__file__), "chroma_db")
-chroma_client = chromadb.PersistentClient(path=CHROMA_PATH)
 
 def get_callbacks():
     if os.getenv("LANGFUSE_PUBLIC_KEY") and os.getenv("LANGFUSE_SECRET_KEY"):
@@ -90,7 +88,11 @@ def process_project_background(project_id: int):
             db.commit()
             return
             
-        tree_str = "\n".join(file_tree[:150])
+        tree_str = "\n".join(file_tree[:300])  # store up to 300 paths
+
+        # Persist the file tree so agents can use it for accurate docs
+        project.file_tree = tree_str
+        db.commit()
         
         db.refresh(project)
         if project.status == "paused": 
@@ -129,13 +131,12 @@ def process_project_background(project_id: int):
             try:
                 embeddings = OpenAIEmbeddings(api_key=os.getenv("OPENAI_API_KEY"))
                 collection_name = f"project_{project.id}"
-                
                 try:
-                    chroma_client.delete_collection(name=collection_name)
+                    get_chroma_client().delete_collection(name=collection_name)
                 except Exception:
                     pass
-                
-                collection = chroma_client.create_collection(name=collection_name)
+
+                collection = get_chroma_client().create_collection(name=collection_name)
                 
                 ids = [f"chunk_{i}" for i in range(len(chunks))]
                 texts = [c.page_content for c in chunks]
@@ -163,7 +164,7 @@ def process_project_background(project_id: int):
 def search_code(project_id: int, query: str):
     try:
         embeddings = OpenAIEmbeddings(api_key=os.getenv("OPENAI_API_KEY"))
-        collection = chroma_client.get_collection(name=f"project_{project_id}")
+        collection = get_chroma_client().get_collection(name=f"project_{project_id}")
         
         query_embedding = embeddings.embed_query(query)
         results = collection.query(

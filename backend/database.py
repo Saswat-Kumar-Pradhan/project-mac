@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, JSON
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, JSON, inspect, text
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
 # SQLite database stored at backend/macads.db
@@ -46,9 +46,21 @@ class Project(Base):
     pm_docs = Column(String, nullable=True)
     architecture_diagram = Column(String, nullable=True)
     analysis_context = Column(String, default="")
+    file_tree = Column(String, nullable=True)  # newline-separated relative paths
 
     user_id = Column(Integer, ForeignKey("users.id"))
     owner = relationship("User", back_populates="projects")
 
 # Create tables on startup
 Base.metadata.create_all(bind=engine)
+
+# Auto-migrate: add any missing columns to existing tables
+def _run_migrations():
+    with engine.connect() as conn:
+        existing = [col["name"] for col in inspect(engine).get_columns("projects")]
+        if "file_tree" not in existing:
+            conn.execute(text("ALTER TABLE projects ADD COLUMN file_tree TEXT"))
+            conn.commit()
+            print("DB migration: added 'file_tree' column to projects.")
+
+_run_migrations()

@@ -168,21 +168,29 @@ else:
                         if p['status'] == "documented":
                             st.divider()
                             st.subheader("📚 Generated Documentation")
-                            col1, col2 = st.columns(2)
-                            with col1:
+
+                            # Build tab list dynamically based on available docs
+                            tab_labels = []
+                            if p.get("sde_docs"): tab_labels.append("🛠 SDE Docs")
+                            if p.get("pm_docs"):  tab_labels.append("📋 PM Docs")
+                            if p.get("architecture_diagram"): tab_labels.append("🏗 Architecture")
+
+                            if tab_labels:
+                                tabs = st.tabs(tab_labels)
+                                tab_idx = 0
                                 if p.get("sde_docs"):
-                                    with st.expander("SDE Documentation"):
+                                    with tabs[tab_idx]:
                                         st.markdown(p["sde_docs"])
                                         st.download_button("Download SDE Docs (.md)", data=p["sde_docs"], file_name=f"Project_{p['id']}_SDE.md", type="primary")
-                            with col2:
+                                    tab_idx += 1
                                 if p.get("pm_docs"):
-                                    with st.expander("PM Documentation"):
+                                    with tabs[tab_idx]:
                                         st.markdown(p["pm_docs"])
                                         st.download_button("Download PM Docs (.md)", data=p["pm_docs"], file_name=f"Project_{p['id']}_PM.md", type="primary")
-                            
-                            if p.get("architecture_diagram"):
-                                st.subheader("Architecture")
-                                st.code(p["architecture_diagram"], language="mermaid")
+                                    tab_idx += 1
+                                if p.get("architecture_diagram"):
+                                    with tabs[tab_idx]:
+                                        st.code(p["architecture_diagram"], language="mermaid")
                             
                             st.divider()
                             st.write("**Global Actions**")

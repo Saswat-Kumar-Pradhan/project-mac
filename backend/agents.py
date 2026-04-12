@@ -20,24 +20,42 @@ CHROMA_PATH = os.path.join(os.path.dirname(__file__), "chroma_db")
 chroma_client = chromadb.PersistentClient(path=CHROMA_PATH)
 
 def fetch_context_from_chroma(project_id: int, query: str, k: int = 15) -> str:
+    collection_name = f"project_{project_id}"
+    try:
+        collection = chroma_client.get_collection(name=collection_name)
+    except Exception as e:
+        print(f"ChromaDB collection not found for project {project_id}: {e}")
+        return ""
+
+    # Try semantic search with OpenAI embeddings first
     try:
         embeddings = OpenAIEmbeddings(api_key=os.getenv("OPENAI_API_KEY"))
-        collection = chroma_client.get_collection(name=f"project_{project_id}")
         query_embedding = embeddings.embed_query(query)
         results = collection.query(
             query_embeddings=[query_embedding],
             n_results=k
         )
+        if results['documents']:
+            docs = []
+            for i, doc in enumerate(results['documents'][0]):
+                source = results['metadatas'][0][i].get('source', 'Unknown')
+                docs.append(f"--- File: {source} ---\n{doc}\n")
+            return "\n".join(docs)
+    except Exception as e:
+        print(f"Embedding lookup failed (falling back to raw context): {e}")
+
+    # Fallback: return first k stored documents without embedding
+    try:
+        results = collection.get(limit=k, include=["documents", "metadatas"])
         if not results['documents']:
             return "No context found."
-            
         docs = []
-        for i, doc in enumerate(results['documents'][0]):
-            source = results['metadatas'][0][i].get('source', 'Unknown')
+        for i, doc in enumerate(results['documents']):
+            source = results['metadatas'][i].get('source', 'Unknown') if results['metadatas'] else 'Unknown'
             docs.append(f"--- File: {source} ---\n{doc}\n")
         return "\n".join(docs)
     except Exception as e:
-        print(f"ChromaDB lookup failed: {e}")
+        print(f"ChromaDB fallback also failed: {e}")
         return ""
 
 def run_sde_agent(project_id: int, project: Project, llm) -> str:

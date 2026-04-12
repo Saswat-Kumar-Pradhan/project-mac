@@ -3,6 +3,7 @@ import zipfile
 import uuid
 import re
 import aiofiles
+from typing import List
 
 # Load .env file when running locally (no-op if python-dotenv is missing or file absent)
 try:
@@ -18,8 +19,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from jose import jwt, JWTError
 from pydantic import BaseModel
-from database import get_db, User, Project
-from schemas import UserCreate, UserInDB, Token, TokenData, ProjectInfo, ProjectCreateGitHub
+from database import get_db, User, Project, AnalysisLog
+from schemas import UserCreate, UserInDB, Token, TokenData, ProjectInfo, ProjectCreateGitHub, AnalysisLogOut
 from security import verify_password, get_password_hash, create_access_token, SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 from fastapi.responses import FileResponse
 from processor import process_project_background, search_code
@@ -249,6 +250,13 @@ def add_github_project(
 @app.get("/api/projects/", response_model=list[ProjectInfo])
 def get_user_projects(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return db.query(Project).filter(Project.user_id == current_user.id).order_by(Project.id.desc()).all()
+
+@app.get("/api/projects/{project_id}/logs", response_model=List[AnalysisLogOut])
+def get_project_logs(project_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    project = db.query(Project).filter(Project.id == project_id, Project.user_id == current_user.id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return db.query(AnalysisLog).filter(AnalysisLog.project_id == project_id).order_by(AnalysisLog.id.asc()).all()
 
 # CONTROL ROUTES
 @app.post("/api/projects/{project_id}/pause")

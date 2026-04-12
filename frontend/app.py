@@ -83,6 +83,16 @@ def toggle_pause(project_id, action):
     else:
         st.error(f"Failed to {action} project.")
 
+def fetch_logs(project_id):
+    headers = {"Authorization": f"Bearer {st.session_state['token']}"}
+    try:
+        res = requests.get(f"{API_URL}/api/projects/{project_id}/logs", headers=headers)
+        if res.status_code == 200:
+            return res.json()
+    except Exception:
+        pass
+    return []
+
 if st.session_state["token"] is None:
     st.title("Welcome to MACADS")
     tab1, tab2 = st.tabs(["Login", "Sign Up"])
@@ -145,11 +155,34 @@ else:
                             toggle_pause(p['id'], "resume")
                     
                     elif p['status'] in ["created", "analyzing", "generating"]:
-                        st.info(f"Currently in progress: {p['status']}")
-                        if st.button("Pause Flow", key=f"pau_{p['id']}"):
+                        st.info(f"System State: {p['status'].title()}...")
+                        
+                        if p['status'] == "analyzing":
+                            logs = fetch_logs(p['id'])
+                            if logs:
+                                latest_log = logs[-1]
+                                st.progress(latest_log['percentage'] / 100)
+                                
+                                # Prominent Status Box for Current Activity
+                                st.markdown(f"""
+                                <div style="background-color: #f0f2f6; padding: 10px; border-radius: 5px; border-left: 5px solid #007bff; margin-bottom: 20px;">
+                                    <h4 style="margin: 0; color: #007bff;">🔍 Current Activity</h4>
+                                    <p style="margin: 5px 0 0 0; font-family: monospace;">{latest_log['message']}</p>
+                                </div>
+                                """, unsafe_allow_value=True)
+                                
+                                with st.expander("Show Processing History Logs", expanded=False):
+                                    for log in reversed(logs[:-1]): # Show history logs
+                                        emoji = "ℹ️"
+                                        if log['level'] == "warning": emoji = "⚠️"
+                                        if log['level'] == "error": emoji = "❌"
+                                        st.write(f"{emoji} {log['message']}")
+                        
+                        if st.button("Pause Process", key=f"pau_{p['id']}"):
                             toggle_pause(p['id'], "pause")
                             
-                        time.sleep(2 if p['status'] in ['created', 'analyzing'] else 5)
+                        # Refresh logic for active states
+                        time.sleep(2)
                         st.rerun()
                         
                     elif p['status'] in ["completed", "documented"]:

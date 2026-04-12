@@ -1,6 +1,7 @@
 import os
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, JSON, inspect, text
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, JSON, inspect, text, DateTime
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
+from datetime import datetime
 
 # SQLite database stored at backend/macads.db
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -50,6 +51,19 @@ class Project(Base):
 
     user_id = Column(Integer, ForeignKey("users.id"))
     owner = relationship("User", back_populates="projects")
+    logs = relationship("AnalysisLog", back_populates="project", cascade="all, delete-orphan")
+
+class AnalysisLog(Base):
+    __tablename__ = "analysis_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id"))
+    message = Column(String, nullable=False)
+    level = Column(String, default="info")  # info, warning, error
+    percentage = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    project = relationship("Project", back_populates="logs")
 
 # Create tables on startup
 Base.metadata.create_all(bind=engine)

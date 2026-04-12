@@ -6,12 +6,13 @@ This prevents the 'An instance of Chroma already exists with different settings'
 crash on uvicorn --reload.
 """
 import os
+from typing import Optional
 import chromadb
 from chromadb.config import Settings
 
 CHROMA_PATH = os.path.join(os.path.dirname(__file__), "chroma_db")
 
-_client: chromadb.PersistentClient | None = None
+_client: Optional[chromadb.PersistentClient] = None
 
 
 def get_chroma_client() -> chromadb.PersistentClient:

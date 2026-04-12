@@ -1,4 +1,5 @@
 from typing import Optional, List
+from datetime import datetime
 from pydantic import BaseModel, EmailStr, Field
 
 # USER SCHEMAS
@@ -42,5 +43,15 @@ class ProjectInfo(BaseModel):
     pm_docs: Optional[str] = None
     architecture_diagram: Optional[str] = None
     
+    class Config:
+        from_attributes = True
+
+class AnalysisLogOut(BaseModel):
+    id: int
+    message: str
+    level: str
+    percentage: int
+    created_at: datetime
+
     class Config:
         from_attributes = True

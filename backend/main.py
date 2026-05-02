@@ -14,6 +14,7 @@ except ImportError:
     pass
 from datetime import timedelta
 from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Form, BackgroundTasks
+from fastapi.openapi.docs import get_redoc_html
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -29,7 +30,15 @@ from export_service import convert_markdown_to_pdf
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import PromptTemplate
 
-app = FastAPI(title="Multi-Agent Code Analysis & Documentation System API")
+app = FastAPI(title="Multi-Agent Code Analysis & Documentation System API", redoc_url=None)
+
+@app.get("/redoc", include_in_schema=False)
+async def redoc_html():
+    return get_redoc_html(
+        openapi_url=app.openapi_url,
+        title=app.title + " - ReDoc",
+        redoc_js_url="https://cdn.jsdelivr.net/npm/redoc@latest/bundles/redoc.standalone.js",
+    )
 
 app.add_middleware(
     CORSMiddleware,
